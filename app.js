@@ -1,13 +1,12 @@
 /* =========================================================
-   MARS CLIMATE RADAR — app.js  v2.0
+   MARS CLIMATE RADAR — app.js  v2.1
    ─────────────────────────────────────────────────────────
-   핵심 구현:
-   ① video.getBoundingClientRect() 로 실제 화면 좌표 획득
-   ② CSS transform/object-fit 보정 (scaleX, scaleY)
-   ③ base 좌표(xPct,yPct)를 center 기준 cos/sin 회전 변환
-   ④ translate3d(...) 로 overlay 위치 적용 (left/top 미사용)
+   패치 적용:
+   ① 숫자 보간: 180ms easeInOut 부드러운 변화
+   ② 회전 변환: rotatePoint() 수식으로 1px 오차 제거
+   ③ video.getBoundingClientRect() 기반 정확한 좌표
+   ④ translate3d(...) 로 최적화된 렌더링
    ⑤ 콘솔: slotId, video.currentTime, computedX, computedY
-   ⑥ 데이터: 5s 폴링 + 150~250ms 보간
    ========================================================= */
 'use strict';
 
@@ -15,6 +14,7 @@ const D2R = Math.PI / 180;
 const VIDEO_W = 1936, VIDEO_H = 1060;
 const SPHERE_CX_PCT = 0.50, SPHERE_CY_PCT = 0.50, SPHERE_R_PCT = 0.435;
 const ROT_SPEED = 0.16;
+const LERP_DURATION = 180; // ms
 
 // 경도 슬롯 (10° 간격)
 const LON_SLOTS = [];
@@ -44,7 +44,7 @@ const S = {
   glitchOn:true, lonVisible:true, speed:1.0, frameCount:0,
   fps:0, fpsFrames:0, fpsTimer:0, lastPoll:-9999,
   stations: STATIONS_BASE.map(b=>({...b, dispTemp:b.temp, targTemp:b.temp,
-    dispPres:b.pres, targPres:b.pres, lerpT0:0, lerpDur:200})),
+    dispPres:b.pres, targPres:b.pres, lerpStart:0, lerpEnd:0})),
   logLines:[],
 };
 
@@ -73,6 +73,37 @@ const gctx = glitchCanvas.getContext('2d');
 
 let lonLabelEls=[], dataBoxEls=[], leaderLineEls=[];
 
+// ═══════════════════════════════════════════════════════════
+//  회전 변환 함수 (사용자 패치 적용)
+// ═══════════════════════════════════════════════════════════
+function rotatePoint(x, y, cx, cy, angleRad) {
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  const dx = x - cx;
+  const dy = y - cy;
+  return {
+    x: cx + dx * cos - dy * sin,
+    y: cy + dx * sin + dy * cos
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  숫자 보간 함수 (사용자 패치 적용)
+// ═══════════════════════════════════════════════════════════
+function smoothUpdate(el, from, to, duration = LERP_DURATION) {
+  const start = performance.now();
+  function frame(t) {
+    const elapsed = t - start;
+    const p = Math.min(1, elapsed / duration);
+    // easeInOut 보간
+    const eased = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+    const v = from + (to - from) * eased;
+    el.innerText = v.toFixed(1) + '°C';
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
 function buildOverlayElements() {
   lonLabelEls.forEach(e=>e.remove());
   dataBoxEls.forEach(e=>e.remove());
@@ -81,7 +112,7 @@ function buildOverlayElements() {
 
   for (const sl of LON_SLOTS) {
     const el=document.createElement('div');
-    el.style.cssText='position:absolute;top:0;left:0;font-family:\'Share Tech Mono\',monospace;font-size:clamp(7px,0.7vw,9.5px);color:rgba(160,232,255,0.82);white-space:nowrap;pointer-events:none;will-change:transform;transform-origin:0 0;text-shadow:0 0 5px rgba(0,200,255,0.35);line-height:1;z-index:6;';
+    el.style.cssText='position:absolute;top:0;left:0;font-family:\'Share Tech Mono\',monospace;font-size:clamp(7px,0.7vw,9.5px);color:rgba(160,232,255,0.82);white-space:nowrap;pointer-events:none;will-change:transform;transform-origin:center center;text-shadow:0 0 5px rgba(0,200,255,0.35);line-height:1;z-index:6;';
     let v=sl.lon%180; if(v<0)v+=180;
     el.textContent=v+'°';
     el.dataset.lon=sl.lon; el.dataset.lat=sl.lat; el.dataset.sid=sl.id;
@@ -130,6 +161,7 @@ function getVideoDisplayRect() {
   const offX=vRect.left-wRect.left, offY=vRect.top-wRect.top;
   return {
     x:offX+dX, y:offY+dY, w:dW, h:dH,
+    cx: offX+dX+dW/2, cy: offY+dY+dH/2,
     toScreen:(xPct,yPct)=>({x:offX+dX+xPct*dW, y:offY+dY+yPct*dH}),
   };
 }
@@ -140,9 +172,6 @@ function getVideoDisplayRect() {
 function updateOverlayPositions(rotAngle) {
   const vt=video.currentTime;
   const dr=getVideoDisplayRect();
-  const cX=dr.x+SPHERE_CX_PCT*dr.w;
-  const cY=dr.y+SPHERE_CY_PCT*dr.h;
-  const Rs=SPHERE_R_PCT*dr.h;
   const batch=[];
 
   // 경도 숫자 레이블
@@ -153,12 +182,19 @@ function updateOverlayPositions(rotAngle) {
       const slotId=el.dataset.sid;
       const p=projectToVideo(latDeg,lonDeg,rotAngle);
       if(!p.visible){el.style.opacity='0';continue;}
-      const {x:computedX,y:computedY}=dr.toScreen(p.xPct,p.yPct);
+      const screenPos=dr.toScreen(p.xPct,p.yPct);
+      const baseX=screenPos.x, baseY=screenPos.y;
+      
+      // 사용자 패치: 회전 변환 적용
+      const rotated = rotatePoint(baseX, baseY, dr.cx, dr.cy, rotAngle);
+      const computedX=rotated.x, computedY=rotated.y;
+      
       const alpha=Math.max(0,Math.min(0.86,(p.z+0.10)*1.7));
       el.style.opacity=alpha.toFixed(3);
-      // ④ translate3d 적용
-      el.style.transform=`translate3d(${computedX.toFixed(2)}px,${computedY.toFixed(2)}px,0) translate(-50%,-50%)`;
-      // ⑤ 샘플 로그
+      // translate3d 적용
+      el.style.transform=`translate3d(${computedX.toFixed(1)}px,${computedY.toFixed(1)}px,0) translate(-50%,-50%)`;
+      
+      // 샘플 로그
       if(Math.random()<0.0012){
         const msg=`[${slotId}] t=${vt.toFixed(3)}s x=${computedX.toFixed(2)} y=${computedY.toFixed(2)}`;
         batch.push(msg); console.log(msg);
@@ -173,16 +209,30 @@ function updateOverlayPositions(rotAngle) {
     for(let i=0;i<S.stations.length;i++){
       const sd=S.stations[i], box=dataBoxEls[i], ln=leaderLineEls[i], bp=BOX_POS[i];
       const p=projectToVideo(sd.lat,sd.lon,rotAngle);
-      const {x:sfX,y:sfY}=dr.toScreen(p.xPct,p.yPct);
-      const bX=cX+bp.xR*Rs, bY=cY+bp.yR*Rs;
-      box.style.transform=`translate3d(${bX.toFixed(2)}px,${bY.toFixed(2)}px,0)`;
+      const screenPos=dr.toScreen(p.xPct,p.yPct);
+      const sfX=screenPos.x, sfY=screenPos.y;
+      
+      // 박스 위치 (중심 기준 회전)
+      const baseBX=dr.cx+bp.xR*SPHERE_R_PCT*dr.h;
+      const baseBY=dr.cy+bp.yR*SPHERE_R_PCT*dr.h;
+      const rotatedBox = rotatePoint(baseBX, baseBY, dr.cx, dr.cy, rotAngle);
+      const bX=rotatedBox.x, bY=rotatedBox.y;
+      
+      box.style.transform=`translate3d(${bX.toFixed(1)}px,${bY.toFixed(1)}px,0)`;
       box.style.opacity='1';
+      
+      // 온도 보간 업데이트
       const tv=box.querySelector('.tv');
-      if(tv)tv.textContent=sd.dispTemp.toFixed(1)+'°C';
+      if(tv && sd.targTemp !== sd.dispTemp) {
+        smoothUpdate(tv, sd.dispTemp, sd.targTemp, LERP_DURATION);
+        sd.dispTemp = sd.targTemp;
+      }
+      
       const bw=box.offsetWidth||96, bh=box.offsetHeight||66;
       const lx1=bp.side==='L'?bX+bw:bX, ly1=bY+bh/2;
       ln.setAttribute('x1',lx1.toFixed(1)); ln.setAttribute('y1',ly1.toFixed(1));
       ln.setAttribute('x2',sfX.toFixed(1)); ln.setAttribute('y2',sfY.toFixed(1));
+      
       const msg=`[${sd.id}] t=${vt.toFixed(3)}s x=${sfX.toFixed(2)} y=${sfY.toFixed(2)}`;
       batch.push(msg); console.log(msg);
     }
@@ -307,15 +357,8 @@ function pollStations(now){
     const sd=S.stations[i],b=STATIONS_BASE[i];
     sd.targTemp=b.temp+(Math.random()-0.5)*3.5;
     sd.targPres=b.pres+(Math.random()-0.5)*0.35;
-    sd.lerpT0=now; sd.lerpDur=150+Math.random()*100;
-  }
-}
-function lerpStations(now){
-  for(const sd of S.stations){
-    const t=Math.min(1,(now-sd.lerpT0)/sd.lerpDur);
-    const e=t<0.5?2*t*t:-1+(4-2*t)*t;
-    sd.dispTemp+=(sd.targTemp-sd.dispTemp)*e*0.10;
-    sd.dispPres+=(sd.targPres-sd.dispPres)*e*0.10;
+    sd.lerpStart=now;
+    sd.lerpEnd=now+LERP_DURATION;
   }
 }
 
@@ -383,7 +426,6 @@ function loop(timestamp){
   if(timestamp-clockTimer>1000){clockTimer=timestamp;updateClock();updateFrameCounter();}
   if(timestamp-dataTimer>1500){dataTimer=timestamp;updateClimateData();}
   pollStations(timestamp);
-  lerpStations(timestamp);
   drawGrid();
   drawGlitch(timestamp);
   // 핵심: video.currentTime → 회전각 → overlay 위치 갱신
