@@ -2,33 +2,25 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="description" content="Mars Climate Radar — Real-time atmospheric monitoring of the Martian surface. Interactive radar visualization with live climate data overlay." />
   <title>MARS CLIMATE RADAR · MCD v6.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Skip link for accessibility -->
   <a href="#main-controls" class="skip-link">컨트롤로 바로 이동</a>
-
-  <!-- Top status bar -->
   <header class="status-bar" role="banner" aria-label="시스템 상태 표시줄">
     <div class="status-left">
-      <span class="status-label">AUTOTUNE</span>
-      <span class="status-sep">·</span>
-      <span class="status-label">DISP 3</span>
-      <span class="status-sep">·</span>
+      <span class="status-label">AUTOTUNE</span><span class="status-sep">·</span>
+      <span class="status-label">DISP 3</span><span class="status-sep">·</span>
       <span class="status-label">ANT 1 MAIN</span>
       <div class="status-row">
-        <span id="sys-version">MCD v6.1</span>
-        <span class="status-sep">·</span>
-        <span id="sol-display">SOL <span class="val">473</span></span>
-        <span class="status-sep">·</span>
-        <span>MY<span class="val">38</span></span>
-        <span class="status-sep">·</span>
+        <span id="sys-version">MCD v6.1</span><span class="status-sep">·</span>
+        <span id="sol-display">SOL <span class="val">473</span></span><span class="status-sep">·</span>
+        <span>MY<span class="val">38</span></span><span class="status-sep">·</span>
         <span>LS <span class="val" id="ls-val">242.9°</span></span>
       </div>
       <div class="status-row live-data">
@@ -55,176 +47,119 @@
       <div class="status-dim">SIGNAL STATUS: <span class="val blink-slow">NOMINAL</span></div>
     </div>
   </header>
-
-  <!-- Main layout -->
   <main class="main-layout" role="main">
-
-    <!-- Left data panel -->
     <aside class="side-panel panel-left" aria-label="좌측 기후 데이터 패널">
       <div class="panel-section">
         <div class="panel-label">PRESSURE Pa</div>
         <div class="panel-value" id="pres-left">767.89</div>
-        <canvas class="sparkline" id="spark-pressure" width="160" height="40" aria-label="압력 추이 그래프"></canvas>
+        <canvas class="sparkline" id="spark-pressure" width="160" height="40"></canvas>
       </div>
       <div class="panel-section">
         <div class="panel-label">TEMPERATURE °C</div>
         <div class="panel-value" id="temp-left">−68.47</div>
-        <canvas class="sparkline" id="spark-temp" width="160" height="40" aria-label="온도 추이 그래프"></canvas>
+        <canvas class="sparkline" id="spark-temp" width="160" height="40"></canvas>
       </div>
       <div class="panel-section">
         <div class="panel-label">DUST OPACITY τ</div>
         <div class="panel-value" id="tau-left">1.318</div>
-        <canvas class="sparkline" id="spark-tau" width="160" height="40" aria-label="먼지 불투명도 추이 그래프"></canvas>
+        <canvas class="sparkline" id="spark-tau" width="160" height="40"></canvas>
       </div>
       <div class="panel-section">
         <div class="panel-label">WIND SPEED m/s</div>
         <div class="panel-value" id="wind-left">0.576</div>
-        <canvas class="sparkline" id="spark-wind" width="160" height="40" aria-label="풍속 추이 그래프"></canvas>
+        <canvas class="sparkline" id="spark-wind" width="160" height="40"></canvas>
       </div>
     </aside>
-
-    <!-- Video canvas area -->
     <section class="video-section" aria-label="화성 레이더 영상">
       <div class="video-wrapper" id="video-wrapper">
-        <!-- Canvas overlay for grid/data points -->
         <canvas class="overlay-canvas" id="overlay-canvas" aria-hidden="true"></canvas>
-
-        <!-- Original video — NO filters applied -->
-        <video
-          id="mars-video"
-          src="MARSCLIMATERADAR.mp4"
-          loop
-          playsinline
-          preload="metadata"
-          aria-label="화성 기후 레이더 원본 영상"
-          tabindex="-1"
-        ></video>
-
-        <!-- Glitch overlay layer -->
+        <video id="mars-video" src="MARSCLIMATERADAR.mp4" loop muted playsinline preload="metadata" aria-label="화성 기후 레이더 원본 영상" tabindex="-1"></video>
         <canvas class="glitch-canvas" id="glitch-canvas" aria-hidden="true"></canvas>
-
-        <!-- Data point overlays -->
-        <div class="data-overlay" id="data-overlay" aria-live="polite" aria-label="실시간 위치별 기후 데이터">
-          <div class="data-node" id="node-ing" style="left:24%;top:22%">
-            <div class="node-label">ING</div>
-            <div class="node-val">T <span id="ing-t">−61.6°C</span></div>
-            <div class="node-val">P <span id="ing-p">753 Pa</span></div>
-            <div class="node-val">τ <span id="ing-tau">1.71</span></div>
-          </div>
-          <div class="data-node" id="node-oly" style="right:8%;top:28%">
-            <div class="node-label">OLY</div>
-            <div class="node-val">T <span id="oly-t">−45.7°C</span></div>
-            <div class="node-val">P <span id="oly-p">691 Pa</span></div>
-            <div class="node-val">τ <span id="oly-tau">0.49</span></div>
-          </div>
-          <div class="data-node" id="node-cur" style="left:28%;top:52%">
-            <div class="node-label">CUR</div>
-            <div class="node-val">T <span id="cur-t">−64.5°C</span></div>
-            <div class="node-val">P <span id="cur-p">764 Pa</span></div>
-            <div class="node-val">τ <span id="cur-tau">0.79</span></div>
-          </div>
+        <!-- rAF overlay layer -->
+        <div id="overlay-layer" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:5;">
+          <svg id="leader-svg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:4;"></svg>
         </div>
       </div>
-
-      <!-- Controls bar -->
       <div class="controls-bar" id="main-controls" role="toolbar" aria-label="재생 및 레이어 컨트롤">
-
-        <!-- Playback -->
         <div class="ctrl-group" role="group" aria-label="재생 컨트롤">
-          <button class="ctrl-btn" id="btn-play" aria-label="재생/일시정지 (스페이스바)" title="재생/일시정지">
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path id="play-icon" d="M8 5v14l11-7z"/>
-            </svg>
+          <button class="ctrl-btn" id="btn-play" aria-label="재생/일시정지 (스페이스바)">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path id="play-icon" d="M8 5v14l11-7z"/></svg>
           </button>
-          <button class="ctrl-btn" id="btn-mute" aria-label="음소거/음소거 해제" title="음소거">
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path id="mute-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-            </svg>
+          <button class="ctrl-btn" id="btn-mute" aria-label="음소거/음소거 해제">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path id="mute-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
           </button>
           <div class="volume-wrap">
             <label for="vol-slider" class="sr-only">볼륨</label>
-            <input type="range" id="vol-slider" class="slim-slider" min="0" max="1" step="0.05" value="0.7" aria-label="볼륨 조절" />
+            <input type="range" id="vol-slider" class="slim-slider" min="0" max="1" step="0.05" value="0.7" />
           </div>
         </div>
-
-        <!-- Speed -->
         <div class="ctrl-group" role="group" aria-label="재생 속도">
           <label for="speed-slider" class="ctrl-label">SPD</label>
-          <input type="range" id="speed-slider" class="slim-slider" min="0.1" max="2" step="0.1" value="1" aria-label="재생 속도 (0.1x–2x)" />
+          <input type="range" id="speed-slider" class="slim-slider" min="0.1" max="2" step="0.1" value="1" />
           <span class="ctrl-val" id="speed-val">1.0x</span>
         </div>
-
-        <!-- Layer toggles -->
         <div class="ctrl-group" role="group" aria-label="레이어 토글">
           <span class="ctrl-label">LAYER</span>
-          <button class="layer-btn active" id="toggle-grid" aria-pressed="true" aria-label="그리드 레이어 토글">GRID</button>
-          <button class="layer-btn active" id="toggle-data" aria-pressed="true" aria-label="데이터 포인트 레이어 토글">DATA</button>
-          <button class="layer-btn active" id="toggle-glitch" aria-pressed="true" aria-label="글리치 이펙트 레이어 토글">GLITCH</button>
+          <button class="layer-btn active" id="toggle-grid" aria-pressed="true">GRID</button>
+          <button class="layer-btn active" id="toggle-data" aria-pressed="true">DATA</button>
+          <button class="layer-btn active" id="toggle-glitch" aria-pressed="true">GLITCH</button>
+          <button class="layer-btn active" id="toggle-lonlabels" aria-pressed="true">LON</button>
         </div>
-
-        <!-- Share -->
         <div class="ctrl-group" role="group" aria-label="공유">
-          <button class="ctrl-btn share-btn" id="btn-share" aria-label="현재 URL 공유" title="공유">
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
-            </svg>
+          <button class="ctrl-btn share-btn" id="btn-share" aria-label="링크 공유">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             SHARE
           </button>
           <span class="share-toast" id="share-toast" aria-live="assertive" role="status"></span>
         </div>
-
-        <!-- Version -->
-        <div class="ctrl-group version-group">
-          <span class="version-tag" aria-label="버전 정보">v0.1.0-draft · MCD v6.1</span>
+        <div class="ctrl-group ctrl-info">
+          <span class="ctrl-label">FRAME</span>
+          <span id="frame-counter"><span class="val">0000</span></span>
+          <span class="ctrl-label" style="margin-left:8px;" id="fps-display">-- FPS</span>
         </div>
       </div>
     </section>
-
-    <!-- Right data panel -->
     <aside class="side-panel panel-right" aria-label="우측 기후 데이터 패널">
       <div class="panel-section">
-        <div class="panel-label">LOCATION</div>
-        <div class="panel-value-sm" id="loc-display">ISIDIS PLANITIA</div>
+        <div class="panel-label">INGENUITY SITE</div>
+        <div class="panel-value sm" id="ing-t">−61.6°C</div>
+        <div class="panel-value sm" id="ing-p">753 Pa</div>
+        <div class="panel-value sm">τ <span id="ing-tau">1.71</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">OLYMPUS MONS</div>
+        <div class="panel-value sm" id="oly-t">−45.7°C</div>
+        <div class="panel-value sm" id="oly-p">691 Pa</div>
+        <div class="panel-value sm">τ <span id="oly-tau">0.49</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">CURIOSITY SITE</div>
+        <div class="panel-value sm" id="cur-t">−64.5°C</div>
+        <div class="panel-value sm" id="cur-p">764 Pa</div>
+        <div class="panel-value sm">τ <span id="cur-tau">0.79</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">COORDINATES</div>
         <div class="panel-coord">LAT <span id="lat-val">4.5°N</span> LON <span id="lon-val">87.0°E</span></div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-label">SOLAR LONGITUDE</div>
-        <div class="panel-value" id="ls-right">242.9°</div>
-        <div class="panel-sub">NORTHERN AUTUMN</div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-label">DUST STORM INDEX</div>
-        <div class="panel-value" id="storm-idx">MODERATE</div>
-        <div class="storm-bar-wrap">
-          <div class="storm-bar" id="storm-bar" style="width:55%"></div>
-        </div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-label">SIGNAL QUALITY</div>
-        <div class="signal-bars" aria-label="신호 강도 5/5">
-          <span class="sig-bar active" aria-hidden="true"></span>
-          <span class="sig-bar active" aria-hidden="true"></span>
-          <span class="sig-bar active" aria-hidden="true"></span>
-          <span class="sig-bar active" aria-hidden="true"></span>
-          <span class="sig-bar active" aria-hidden="true"></span>
-        </div>
       </div>
     </aside>
   </main>
-
-  <!-- Bottom status strip -->
-  <footer class="bottom-strip" role="contentinfo" aria-label="하단 상태 표시줄">
+  <footer class="bottom-strip" role="contentinfo">
     <span>PERFORMANCE: <span class="val blink-slow" id="perf-val">NOMINAL</span></span>
     <span class="status-sep">·</span>
     <span>TERRAIN: <span class="val">ISIDIS CRATER</span></span>
     <span class="status-sep">·</span>
     <span>0° EQUATOR TRACK ACTIVE</span>
     <span class="status-sep">·</span>
-    <span id="frame-counter">FRAME: <span class="val">0000</span></span>
+    <span id="frame-counter-foot">FRAME: <span class="val">0000</span></span>
     <span class="status-sep">·</span>
     <span>MARS CLIMATE RADAR © 2025</span>
   </footer>
-
+  <!-- 콘솔 로그 패널 -->
+  <div id="log-panel" style="position:fixed;bottom:40px;right:10px;width:clamp(230px,24vw,340px);max-height:140px;overflow-y:auto;background:rgba(0,3,16,0.92);border:1px solid rgba(0,229,255,0.26);font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(0,229,255,0.68);padding:5px 7px;z-index:100;line-height:1.55;scrollbar-width:thin;scrollbar-color:#00b8d4 transparent;">
+    <div style="color:#00ff88;margin-bottom:3px;">▶ FRAME LOG  slotId | video.currentTime | computedX | computedY</div>
+    <div id="log-content"></div>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>

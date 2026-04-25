@@ -6,17 +6,17 @@
 :root {
   --bg:            #000000;
   --bg-dark:       #010801;
-  --green-bright:  #00FF41;
-  --green-mid:     #00CC33;
-  --green-dim:     #00882A;
-  --green-glow:    #003311;
-  --green-faint:   #001A09;
-  --panel-bg:      rgba(0, 12, 0, 0.90);
-  --panel-border:  #00FF41;
-  --text-primary:  #00FF41;
-  --text-secondary:#00CC33;
-  --text-dim:      #00882A;
-  --text-muted:    #004418;
+  --green-bright:  #00e5ff;
+  --green-mid:     #00b8d4;
+  --green-dim:     #0077aa;
+  --green-glow:    #001833;
+  --green-faint:   #000d1a;
+  --panel-bg:      rgba(2, 12, 44, 0.90);
+  --panel-border:  #00e5ff;
+  --text-primary:  #00e5ff;
+  --text-secondary:#00b8d4;
+  --text-dim:      #0077aa;
+  --text-muted:    #003355;
   --font-mono:     'Share Tech Mono', 'Courier New', monospace;
   --font-display:  'Orbitron', 'Share Tech Mono', monospace;
   --ctrl-h:        44px;
@@ -57,7 +57,7 @@ html, body {
 .status-bar {
   position: fixed; top: 0; left: 0; right: 0;
   height: var(--header-h);
-  background: rgba(0,6,0,0.96);
+  background: rgba(0,3,18,0.96);
   border-bottom: 1px solid var(--green-glow);
   display: flex; align-items: flex-start;
   padding: 6px 12px;
@@ -385,7 +385,7 @@ html, body {
 .bottom-strip {
   position: fixed; bottom: 0; left: 0; right: 0;
   height: var(--footer-h);
-  background: rgba(0,6,0,0.96);
+  background: rgba(0,3,18,0.96);
   border-top: 1px solid var(--green-glow);
   display: flex; align-items: center;
   padding: 0 12px; gap: 0;
@@ -436,4 +436,52 @@ html, body {
 :focus-visible {
   outline: 2px solid var(--green-bright);
   outline-offset: 2px;
+}
+
+/* ── v2.0 추가 스타일 ─────────────────────────────────── */
+:root {
+  --cyan: #00e5ff;
+  --cyan2: #00b8d4;
+  --cyan3: #4dd9ff;
+  --glow: rgba(0,229,255,0.38);
+}
+
+#overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 5;
+}
+
+#leader-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.panel-value.sm {
+  font-size: 0.85em;
+  margin-bottom: 2px;
+}
+
+#fps-display {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78em;
+  color: rgba(0,229,255,0.6);
+}
+
+.ctrl-info {
+  margin-left: auto;
+}
+
+#log-panel::-webkit-scrollbar { width: 3px; }
+#log-panel::-webkit-scrollbar-thumb { background: var(--cyan2); border-radius: 2px; }
+
+@media (max-width: 600px) {
+  #log-panel { display: none !important; }
 }
